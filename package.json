@@ -1,0 +1,14 @@
+{
+  "name": "afterlog",
+  "version": "0.0.0",
+  "module": "index.ts",
+  "author": "aquaticcalf",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
