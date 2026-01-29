@@ -1,6 +1,6 @@
 {
   "name": "afterlog",
-  "version": "0.0.0",
+  "version": "0.0.0-afterlog",
   "module": "index.ts",
   "author": "aquaticcalf",
   "license": "MIT",
