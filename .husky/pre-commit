@@ -1,0 +1,3 @@
+bun fix
+bun test
+git add .
