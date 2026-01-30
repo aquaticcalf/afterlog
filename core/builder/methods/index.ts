@@ -1,0 +1,8 @@
+export { set } from "@/core/builder/methods/set"
+export { merge } from "@/core/builder/methods/merge"
+export { enrich } from "@/core/builder/methods/enrich"
+export { timing } from "@/core/builder/methods/timing"
+export { time } from "@/core/builder/methods/time"
+export { timeend } from "@/core/builder/methods/timeend"
+export { capture, hasErrors } from "@/core/builder/methods/error"
+export { finalize } from "@/core/builder/methods/finalize"
