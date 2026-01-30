@@ -6,3 +6,6 @@ export type {
   EmitHook,
   ErrorHook,
 } from "@/core/types/adapters/index"
+
+export { afterlog, Afterlog, AfterlogNotConfiguredError } from "@/core/singleton/index"
+export type { SingletonConfig } from "@/core/singleton/index"
