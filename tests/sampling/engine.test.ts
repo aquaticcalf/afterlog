@@ -349,6 +349,9 @@ describe("sampling engine", () => {
 
   describe("error handling", () => {
     test("continues when rule throws", () => {
+      const originalWarn = console.warn
+      console.warn = () => {}
+
       const throwingRule: SamplingRule<TestEvent> = {
         name: "thrower",
         priority: 10,
@@ -364,6 +367,8 @@ describe("sampling engine", () => {
 
       const engine = new SamplingEngine<TestEvent>({ rules: [throwingRule, fallbackRule] })
       const decision = engine.evaluate({} as TestEvent)
+
+      console.warn = originalWarn
 
       expect(decision.reason).toBe("fallback")
     })
