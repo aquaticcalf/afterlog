@@ -89,7 +89,7 @@ async function processPayment(orderId) {
 
 ## Distributed Tracing
 
-**Note:** `trace_id` is automatically generated if you don't provide it.
+Note: `trace_id` is automatically generated if you don't provide it.
 
 When a request spans multiple services, use `builder.trace_id` to propagate the trace:
 
@@ -124,7 +124,7 @@ async function callServiceB(traceId) {
 
 Search by `trace_id` to see the full request flow across services.
 
-**For single-service apps:** You don't need to think about trace_id at all. afterlog generates one automatically.
+For single-service apps: You don't need to think about trace_id at all. afterlog generates one automatically.
 
 ## Datadog Adapter
 
