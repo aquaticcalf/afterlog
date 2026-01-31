@@ -20,9 +20,37 @@ await afterlog.finalize(builder)
 
 ## Install
 
+<details open>
+<summary>bun</summary>
+
+```bash
+bun add afterlog
+```
+</details>
+
+<details>
+<summary>npm</summary>
+
 ```bash
 npm install afterlog
 ```
+</details>
+
+<details>
+<summary>yarn</summary>
+
+```bash
+yarn add afterlog
+```
+</details>
+
+<details>
+<summary>pnpm</summary>
+
+```bash
+pnpm add afterlog
+```
+</details>
 
 ## Quick Start
 
