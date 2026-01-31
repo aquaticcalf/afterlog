@@ -1,12 +1,48 @@
 # Examples
 
-## Express middleware
+## Creating an adapter
 
-Add afterlog to every request:
+An adapter is just an object with an `emit` function. Here is the simplest one:
 
 ```typescript
-import { afterlog } from "afterlog"
+const consoleAdapter = {
+  emit: async (event) => {
+    console.log(JSON.stringify(event))
+  }
+}
 
+afterlog.configure({
+  adapter: consoleAdapter
+})
+```
+
+Add optional lifecycle methods:
+
+```typescript
+const fileAdapter = {
+  stream: fs.createWriteStream("/var/log/app.jsonl", { flags: "a" }),
+  
+  emit: async (event) => {
+    this.stream.write(JSON.stringify(event) + "\n")
+  },
+  
+  flush: async () => {
+    return new Promise((resolve) => {
+      this.stream.end(resolve)
+    })
+  },
+  
+  isHealthy: () => {
+    return this.stream.writable
+  }
+}
+```
+
+## Express integration
+
+afterlog does not include Express middleware. You write your own:
+
+```typescript
 function loggingMiddleware() {
   return (req, res, next) => {
     const builder = afterlog.createBuilder({
@@ -108,9 +144,9 @@ async function callServiceB(traceId, data) {
 
 Now you can search by trace_id and see the whole request flow.
 
-## Custom adapter for Datadog
+## Sending to Datadog
 
-Send logs to Datadog:
+You write the adapter. afterlog just calls it:
 
 ```typescript
 import { afterlog } from "afterlog"

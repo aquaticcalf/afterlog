@@ -1,8 +1,10 @@
 # Getting started
 
+afterlog is a toolkit, not a prebuilt solution. It provides the builder and sampling logic. You write the code that sends logs to your destination.
+
 ## Basic setup
 
-Configure afterlog once when your app starts:
+Configure afterlog once when your app starts. Here we use the built-in console adapter for development:
 
 ```typescript
 import { afterlog, createConsoleAdapter } from "afterlog"
@@ -11,6 +13,8 @@ afterlog.configure({
   adapter: createConsoleAdapter()
 })
 ```
+
+For production, write your own adapter to send logs wherever they need to go.
 
 Now you can create builders anywhere:
 
@@ -134,7 +138,9 @@ The sampling decision happens at the end of the request when we have all the dat
 
 ## Adapters
 
-An adapter decides where logs go. The console adapter prints to stdout:
+An adapter is the only thing you must provide. It decides where logs go.
+
+For local development, use the console adapter:
 
 ```typescript
 import { createConsoleAdapter } from "afterlog"
@@ -142,7 +148,7 @@ import { createConsoleAdapter } from "afterlog"
 const adapter = createConsoleAdapter({ format: "json" })
 ```
 
-Write your own by implementing the `LoggerAdapter` interface:
+For everything else, write your own. It is one function:
 
 ```typescript
 const myAdapter = {

@@ -1,6 +1,8 @@
 # afterlog
 
-Structured logging for TypeScript. One log entry per request with all context, timings, and errors captured in a single JSON object.
+A structured logging toolkit for TypeScript. Build your own logging infrastructure instead of fighting someone else's.
+
+afterlog gives you the patterns and primitives for wide event logging. You bring the adapters, middleware, and integrations.
 
 ## What it does
 
