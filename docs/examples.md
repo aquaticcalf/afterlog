@@ -89,11 +89,14 @@ async function processPayment(orderId) {
 
 ## Distributed Tracing
 
-Pass trace_id through services:
+**Note:** `trace_id` is automatically generated if you don't provide it. Only pass it manually when doing distributed tracing across multiple services.
+
+When a request spans multiple services, generate or extract a `trace_id` and pass it to each service:
 
 ```typescript
-// Service A
+// Service A - generates or extracts trace_id
 async function handleRequest(req) {
+  // Extract from incoming request, or generate a new one
   const traceId = req.headers["x-trace-id"] || crypto.randomUUID()
   
   const builder = afterlog.createBuilder({
@@ -102,14 +105,15 @@ async function handleRequest(req) {
     path: req.path
   })
 
+  // Pass traceId to Service B
   await callServiceB(traceId)
   await afterlog.finalize(builder)
 }
 
-// Service B
+// Service B - uses the same trace_id
 async function callServiceB(traceId) {
   const builder = afterlog.createBuilder({
-    trace_id: traceId,
+    trace_id: traceId,  // same trace as Service A
     http_method: "POST",
     path: "/service-b"
   })
@@ -123,6 +127,8 @@ async function callServiceB(traceId) {
 ```
 
 Search by `trace_id` to see the full request flow across services.
+
+**For single-service apps:** You don't need to think about trace_id at all. afterlog generates one automatically.
 
 ## Datadog Adapter
 
