@@ -90,6 +90,12 @@ const metrics = afterlog.getMetrics()
 
 Created by `afterlog.createBuilder()`. Accumulates data during a request.
 
+### Properties
+
+- `id` - Builder instance UUID (readonly)
+- `trace_id` - Request trace UUID (readonly, auto-generated or from init)
+- `state_` - Current lifecycle state: `created`, `building`, `finalized`, `emitted`
+
 ### set(key, value)
 
 Sets a field. Overwrites existing.

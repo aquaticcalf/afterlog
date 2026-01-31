@@ -94,6 +94,9 @@ class Builder<T extends BaseWideEvent> {
   get id(): UUID {
     return this.state.id
   }
+  get trace_id(): UUID {
+    return this.state.base.trace_id
+  }
 }
 
 export { Builder, extract as extractTraceId }

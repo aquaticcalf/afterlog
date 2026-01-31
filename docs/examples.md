@@ -89,24 +89,20 @@ async function processPayment(orderId) {
 
 ## Distributed Tracing
 
-**Note:** `trace_id` is automatically generated if you don't provide it. Only pass it manually when doing distributed tracing across multiple services.
+**Note:** `trace_id` is automatically generated if you don't provide it.
 
-When a request spans multiple services, generate or extract a `trace_id` and pass it to each service:
+When a request spans multiple services, use `builder.trace_id` to propagate the trace:
 
 ```typescript
-// Service A - generates or extracts trace_id
+// Service A - auto-generates trace_id
 async function handleRequest(req) {
-  // Extract from incoming request, or generate a new one
-  const traceId = req.headers["x-trace-id"] || crypto.randomUUID()
-  
   const builder = afterlog.createBuilder({
-    trace_id: traceId,
     http_method: req.method,
     path: req.path
   })
 
-  // Pass traceId to Service B
-  await callServiceB(traceId)
+  // Pass builder.trace_id to Service B
+  await callServiceB(builder.trace_id)
   await afterlog.finalize(builder)
 }
 
