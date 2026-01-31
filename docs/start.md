@@ -94,7 +94,7 @@ builder.merge("metadata", { zone: "a" })
 
 ```typescript
 // Automatic timing
-const user = await builder.timing("database", () => db.getUser(id))
+const user = await builder.timing("database", () => db.getUser(req.userId))
 
 // Manual timing
 builder.time("external_api")

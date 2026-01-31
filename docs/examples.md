@@ -94,7 +94,7 @@ Pass trace_id through services:
 ```typescript
 // Service A
 async function handleRequest(req) {
-  const traceId = req.headers["x-trace-id"] || generateId()
+  const traceId = req.headers["x-trace-id"] || crypto.randomUUID()
   
   const builder = afterlog.createBuilder({
     trace_id: traceId,
@@ -155,7 +155,7 @@ const isProd = process.env.NODE_ENV === "production"
 afterlog.configure({
   adapter: isProd 
     ? datadogAdapter 
-    : createConsoleAdapter({ format: isProd ? "json" : "pretty" }),
+    : createConsoleAdapter({ pretty: env === "development" }),
   
   service: process.env.SERVICE_NAME,
   version: process.env.SERVICE_VERSION,
@@ -169,8 +169,9 @@ afterlog.configure({
 ## Health Checks
 
 ```typescript
-app.get("/health", (req, res) => {
-  if (!afterlog.isHealthy()) {
+app.get("/health", async (req, res) => {
+  const healthy = await afterlog.isHealthy()
+  if (!healthy) {
     return res.status(503).json({ status: "unhealthy" })
   }
 

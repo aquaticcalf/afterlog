@@ -74,7 +74,7 @@ await afterlog.destroy()
 Checks if adapters are working.
 
 ```typescript
-const healthy = afterlog.isHealthy() // boolean
+const healthy = await afterlog.isHealthy() // boolean
 ```
 
 ### getMetrics()
@@ -238,7 +238,9 @@ Built-in adapter for development.
 
 ```typescript
 const adapter = createConsoleAdapter({
-  format: "json" // or "pretty"
+  pretty: false,  // default: single line json
+  method: "log",  // console method to use
+  includeTimestamp: false
 })
 ```
 
