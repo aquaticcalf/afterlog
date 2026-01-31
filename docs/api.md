@@ -1,56 +1,61 @@
 # API Reference
 
-## afterlog singleton
-
-The main entry point. Configure once, use throughout your app.
+## afterlog
 
 ### configure(config)
 
-Sets up the global instance. Must be called before using other methods.
+Sets up the global instance. Call once at startup.
 
 ```typescript
 afterlog.configure({
   adapter: myAdapter,
   service: "user-api",
-  version: "1.2.3"
+  version: "1.2.3",
+  sampling: {
+    rules: [errorRule],
+    default_rate: 0.05
+  }
 })
 ```
 
-Options:
+**Options:**
 
-- `adapter` (required) - Where to send events. A `LoggerAdapter` or adapter config.
-- `sampling` - Sampling configuration with `rules` array and `default_rate`
+- `adapter` (required) - Object with `emit(event)` method
 - `service`, `version`, `region`, `deployment_id`, `environment` - Added to every event
+- `sampling.rules` - Array of sampling rules
+- `sampling.default_rate` - Number 0-1, defaults to 0.05
 - `enrichers` - Functions that add data at finalize time
-- `buffer` - Buffer settings: `max_size`, `flush_interval_ms`
+- `buffer.max_size` - Max events to buffer
+- `buffer.flush_interval_ms` - Flush interval
 
 ### createBuilder(init)
 
-Creates a new Builder for a request.
+Creates a builder for a request.
 
 ```typescript
 const builder = afterlog.createBuilder({
   http_method: "GET",
-  path: "/api/users"
+  path: "/api/users",
+  trace_id: "abc123"
 })
 ```
 
-The `init` object can include any fields you want in the final event. Common ones are `http_method`, `path`, `trace_id`.
+The `init` object becomes fields in the final event.
 
 ### finalize(builder)
 
-Finalizes the builder and emits the event if sampled.
+Finalizes builder and emits if sampled.
 
 ```typescript
 const emitted = await afterlog.finalize(builder)
-// emitted is true if the event was sent to the adapter
+// returns true if event was sent to adapter
 ```
 
-Returns a promise that resolves to boolean. Always call this, even if you don't use the return value.
+Always call this, even if you don't check the return value.
 
 ### flush()
 
-Flushes any buffered events. Use this during graceful shutdown.
+Flushes buffered events. Use during shutdown.
 
 ```typescript
 await afterlog.flush()
@@ -69,56 +74,52 @@ await afterlog.destroy()
 Checks if adapters are working.
 
 ```typescript
-const healthy = afterlog.isHealthy()
+const healthy = afterlog.isHealthy() // boolean
 ```
-
-Returns boolean.
 
 ### getMetrics()
 
-Gets adapter metrics.
+Returns adapter metrics.
 
 ```typescript
 const metrics = afterlog.getMetrics()
-// { eventsEmitted: 1000, eventsFailed: 2, ... }
+// { eventsEmitted: 1000, eventsFailed: 2, bytesEmitted: 50000 }
 ```
 
 ## Builder
 
-Created by `afterlog.createBuilder()`. Accumulates data throughout a request.
+Created by `afterlog.createBuilder()`. Accumulates data during a request.
 
 ### set(key, value)
 
-Sets a field on the event.
+Sets a field. Overwrites existing.
 
 ```typescript
 builder.set("user_id", "123")
-builder.set("order_total", 99.99)
+builder.set("amount", 99.99)
 ```
-
-Overwrites any existing value.
 
 ### merge(key, value)
 
 Deep merges into a nested object.
 
 ```typescript
-builder.merge("metadata", { source: "web" })
-builder.merge("metadata", { campaign: "summer_sale" })
-// metadata ends up as { source: "web", campaign: "summer_sale" }
+builder.merge("metadata", { region: "us-east" })
+builder.merge("metadata", { zone: "a" })
+// metadata: { region: "us-east", zone: "a" }
 ```
 
 ### enrich(key, value)
 
-Adds enrichment data. Similar to merge but for data that gets added at finalize time.
+Adds data at finalize time. Useful for expensive computations.
 
 ```typescript
-builder.enrich("computed", { expensive_field: calculateValue() })
+builder.enrich("computed", { expensive_field: calculate() })
 ```
 
 ### time(name)
 
-Marks the start of a timing.
+Starts a timer.
 
 ```typescript
 builder.time("database")
@@ -126,86 +127,82 @@ builder.time("database")
 
 ### timeEnd(name)
 
-Marks the end of a timing.
+Ends a timer. Throws if no matching `time()`.
 
 ```typescript
 builder.timeEnd("database")
 ```
 
-Throws if you call timeEnd without a matching time.
-
 ### timing(name, fn)
 
-Times an async function automatically.
+Times an async function.
 
 ```typescript
-const result = await builder.timing("api_call", async () => {
+const result = await builder.timing("api", async () => {
   return await fetch("/api/data")
 })
 ```
 
-If the function throws, the error is still recorded in timings with a `failed: true` flag, then re-thrown.
+If the function throws, records `{ failed: true }` in timings and re-throws.
 
 ### error(err, context?)
 
-Records an error.
+Records an error with optional context.
 
 ```typescript
-builder.error(new Error("Database timeout"))
-builder.error(err, { component: "payment", retry_count: 3 })
+builder.error(new Error("Failed"))
+builder.error(err, { component: "payment", retry: 3 })
 ```
 
-Normalizes errors into a standard format with message, stack, type, and context.
+Errors are normalized with: `message`, `stack`, `type`, `context`
 
 ### finalize()
 
-Finalizes the builder locally. Usually you call `afterlog.finalize(builder)` instead.
+Finalizes locally. Usually call `afterlog.finalize(builder)` instead.
 
 ```typescript
 const finalized = builder.finalize()
 ```
 
-Returns a `Finalized` object with all the collected data.
+Returns a `Finalized` object with all data.
 
-## Sampling
+## Sampling Rules
 
 ### errorRule
 
-A built-in rule that always samples events containing errors.
+Always samples events with errors.
 
 ```typescript
 import { errorRule } from "afterlog"
 
 afterlog.configure({
-  sampling: {
-    rules: [errorRule]
-  }
+  sampling: { rules: [errorRule] }
 })
 ```
 
 ### createLatencyRule(config)
 
-Creates a rule based on request duration.
+Samples based on request duration.
 
 ```typescript
 const rule = createLatencyRule({
-  threshold_ms: 1000,
-  sample_rate: 1.0,      // Sample 100% of slow requests
-  priority: 10
+  threshold_ms: 1000,  // Requests slower than this
+  sample_rate: 1.0,    // Get sampled at this rate
+  priority: 10         // Lower = evaluated first
 })
 ```
 
 ### createRandomRule(rate, priority?)
 
-Random sampling at a fixed rate.
+Random sampling.
 
 ```typescript
-const rule = createRandomRule(0.01, 100)  // 1% sample
+const rule = createRandomRule(0.01, 100) // 1% sample
 ```
 
 ### createConsistentRule(config)
 
-Consistent sampling based on trace_id. Same trace_id always gets the same decision.
+Consistent sampling based on trace_id.
 
 ```typescript
 const rule = createConsistentRule({
@@ -214,58 +211,65 @@ const rule = createConsistentRule({
 })
 ```
 
-### Custom rules
+Same trace_id always gets same decision.
 
-Implement the `SamplingRule` interface:
+### Custom Rules
 
 ```typescript
-const myRule: SamplingRule = {
+const rule: SamplingRule = {
   name: "vip_users",
   priority: 5,
   evaluate: (event) => {
     if (event.user_tier === "vip") {
-      return { sampled: true, rate: 1.0, reason: "vip_user" }
+      return { sampled: true, rate: 1.0, reason: "vip" }
     }
+    // Return undefined to try next rule
   }
 }
 ```
 
-Rules are evaluated in priority order (lowest number first). The first rule that returns a decision wins.
+Rules are evaluated by priority (lowest first). First rule with a result wins.
 
 ## Adapters
 
 ### createConsoleAdapter(options?)
 
-Built-in adapter that logs to console.
+Built-in adapter for development.
 
 ```typescript
 const adapter = createConsoleAdapter({
-  format: "json"  // or "pretty"
+  format: "json" // or "pretty"
 })
 ```
 
-### LoggerAdapter interface
-
-Implement this to send logs elsewhere:
+### LoggerAdapter Interface
 
 ```typescript
 interface LoggerAdapter {
-  emit(event: WideEvent): Promise<void> | void;
-  flush?(): Promise<void> | void;
-  destroy?(): Promise<void> | void;
-  isHealthy?(): boolean;
+  emit(event: WideEvent): Promise<void> | void
+  flush?(): Promise<void> | void
+  destroy?(): Promise<void> | void
+  isHealthy?(): boolean
 }
 ```
 
 Only `emit` is required.
 
-### AdapterManager
+Example:
 
-Wraps adapters with metrics and hooks. Usually you don't interact with this directly.
+```typescript
+const datadogAdapter = {
+  emit: async (event) => {
+    await fetch("https://logs.datadoghq.com/v1/input", {
+      method: "POST",
+      headers: { "DD-API-KEY": key },
+      body: JSON.stringify(event)
+    })
+  }
+}
+```
 
 ## Types
-
-Export these types from the main package:
 
 ```typescript
 import type {
@@ -285,4 +289,44 @@ import type {
   NormalizedError,
   Lifecycle
 } from "afterlog"
+```
+
+## WideEvent Structure
+
+```typescript
+interface WideEvent {
+  // Core fields
+  request_id: string        // UUID
+  trace_id: string          // Distributed tracing ID
+  timestamp: string         // ISO 8601
+  
+  // Service metadata
+  service?: string
+  version?: string
+  region?: string
+  
+  // HTTP fields (if provided)
+  http_method?: string
+  path?: string
+  http_status_code?: number
+  request_duration_ms?: number
+  
+  // Data
+  timings?: Record<string, number>
+  error?: NormalizedError
+  
+  // Custom fields
+  [key: string]: any
+}
+```
+
+## NormalizedError Structure
+
+```typescript
+interface NormalizedError {
+  message: string
+  stack?: string
+  type?: string
+  context?: Record<string, any>
+}
 ```

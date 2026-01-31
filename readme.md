@@ -1,14 +1,6 @@
 # afterlog
 
-The orchestration layer for structured logging in TypeScript.
-
-afterlog coordinates the lifecycle of log events: building context, sampling decisions, timing measurements, error normalization, and dispatch. You bring the adapter that sends logs to your destination. We handle the orchestration, you handle the transport.
-
-## What it does
-
-Most logging libraries emit a line every time you call `console.log()`. This works until you need to understand what happened during a single HTTP request that touched six different services.
-
-afterlog takes a different approach. You create a `Builder` at the start of a request, add data as the request progresses, and emit one comprehensive log entry at the end.
+Structured logging for TypeScript. One JSON object per request.
 
 ```typescript
 import { afterlog } from "afterlog"
@@ -18,35 +10,136 @@ const builder = afterlog.createBuilder({
   path: "/users/123"
 })
 
-// Add fields anytime
 builder.set("user_id", "123")
 
-// Time operations automatically
 const user = await builder.timing("database", () => db.getUser("123"))
 
-// Emit at the end
 await afterlog.finalize(builder)
+// {"request_id":"abc","trace_id":"xyz","http_method":"GET",...}
 ```
-
-The result is a single JSON object with `request_id`, `trace_id`, timestamps, custom fields, and timing breakdowns.
-
-## Why use this?
-
-- Query across related data easily since it is all in one record
-- One write per request instead of dozens
-- Works well with tracing systems
-- Built-in sampling so you do not drown in logs
-
-## Quick links
-
-- [Getting started](./docs/start.md)
-- [API reference](./docs/api.md)
-- [Examples](./docs/examples.md)
 
 ## Install
 
 ```bash
 npm install afterlog
+```
+
+## Quick Start
+
+Configure once:
+
+```typescript
+import { afterlog, createConsoleAdapter } from "afterlog"
+
+afterlog.configure({
+  adapter: createConsoleAdapter()
+})
+```
+
+Use in your routes:
+
+```typescript
+app.get("/users/:id", async (req, res) => {
+  const builder = afterlog.createBuilder({
+    http_method: req.method,
+    path: req.path
+  })
+
+  const user = await builder.timing("db", () => db.getUser(req.params.id))
+  builder.set("user_id", user.id)
+
+  await afterlog.finalize(builder)
+  res.json(user)
+})
+```
+
+## What You Get
+
+One JSON object per request with:
+
+- `request_id` - unique per request
+- `trace_id` - shared across services
+- `timings` - how long each operation took
+- `error` - normalized error info
+- Your custom fields
+
+```json
+{
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "trace_id": "trace-abc123",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "http_method": "GET",
+  "path": "/users/123",
+  "user_id": "123",
+  "timings": {
+    "db": 45,
+    "cache": 5
+  }
+}
+```
+
+## Why Wide Events?
+
+Traditional logging:
+```
+[10:30:00] GET /users/123
+[10:30:00] Database query: SELECT * FROM users WHERE id=123
+[10:30:01] Cache miss
+[10:30:02] Response: 200
+```
+
+Wide event logging:
+```json
+{"http_method":"GET","path":"/users/123","timings":{"db":1000,"cache":50}}
+```
+
+- Query by any field
+- One write per request
+- Works with tracing
+
+## Documentation
+
+- [Getting Started](./docs/start.md) - Setup and basic usage
+- [Examples](./docs/examples.md) - Common patterns
+- [API Reference](./docs/api.md) - All methods and types
+
+## Adapters
+
+afterlog doesn't send logs anywhere by default. You write the adapter:
+
+```typescript
+const datadogAdapter = {
+  emit: async (event) => {
+    await fetch("https://http-intake.logs.datadoghq.com/v1/input", {
+      method: "POST",
+      headers: { "DD-API-KEY": process.env.DD_API_KEY },
+      body: JSON.stringify(event)
+    })
+  }
+}
+
+afterlog.configure({ adapter: datadogAdapter })
+```
+
+Or use the built-in console adapter for development.
+
+## Sampling
+
+Don't log everything. Sample by error, latency, or random:
+
+```typescript
+import { errorRule, createLatencyRule } from "afterlog"
+
+afterlog.configure({
+  adapter: myAdapter,
+  sampling: {
+    rules: [
+      errorRule,  // Always log errors
+      createLatencyRule({ threshold_ms: 1000, sample_rate: 1.0 })  // Always log slow requests
+    ],
+    default_rate: 0.05  // 5% of the rest
+  }
+})
 ```
 
 ## License
