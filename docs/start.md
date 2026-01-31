@@ -1,6 +1,8 @@
 # Getting started
 
-afterlog is a toolkit, not a prebuilt solution. It provides the builder and sampling logic. You write the code that sends logs to your destination.
+afterlog orchestrates the logging lifecycle. It handles event construction, context accumulation, sampling, and dispatch. You provide the adapter that actually sends logs somewhere.
+
+Think of it as the conductor, not the orchestra.
 
 ## Basic setup
 
@@ -138,7 +140,9 @@ The sampling decision happens at the end of the request when we have all the dat
 
 ## Adapters
 
-An adapter is the only thing you must provide. It decides where logs go.
+The adapter is the one thing afterlog does not provide. It is your code that decides where logs go.
+
+afterlog orchestrates everything else: the builder, the sampling, the lifecycle. The adapter is your hook into the transport layer.
 
 For local development, use the console adapter:
 

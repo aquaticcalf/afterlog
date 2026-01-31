@@ -1,8 +1,8 @@
 # afterlog
 
-A structured logging toolkit for TypeScript. Build your own logging infrastructure instead of fighting someone else's.
+The orchestration layer for structured logging in TypeScript.
 
-afterlog gives you the patterns and primitives for wide event logging. You bring the adapters, middleware, and integrations.
+afterlog coordinates the lifecycle of log events: building context, sampling decisions, timing measurements, error normalization, and dispatch. You bring the adapter that sends logs to your destination. We handle the orchestration, you handle the transport.
 
 ## What it does
 
