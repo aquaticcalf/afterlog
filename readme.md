@@ -9,21 +9,21 @@ Most logging libraries emit a line every time you call `console.log()`. This wor
 afterlog takes a different approach. You create a `Builder` at the start of a request, add data as the request progresses, and emit one comprehensive log entry at the end.
 
 ```typescript
-import { afterlog } from 'afterlog';
+import { afterlog } from "afterlog"
 
 const builder = afterlog.createBuilder({
-  http_method: 'GET',
-  path: '/users/123'
-});
+  http_method: "GET",
+  path: "/users/123"
+})
 
 // Add fields anytime
-builder.set('user_id', '123');
+builder.set("user_id", "123")
 
 // Time operations automatically
-const user = await builder.timing('database', () => db.getUser('123'));
+const user = await builder.timing("database", () => db.getUser("123"))
 
 // Emit at the end
-await afterlog.finalize(builder);
+await afterlog.finalize(builder)
 ```
 
 The result is a single JSON object with `request_id`, `trace_id`, timestamps, custom fields, and timing breakdowns.

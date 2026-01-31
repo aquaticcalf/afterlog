@@ -5,11 +5,11 @@
 Configure afterlog once when your app starts:
 
 ```typescript
-import { afterlog, createConsoleAdapter } from 'afterlog';
+import { afterlog, createConsoleAdapter } from "afterlog"
 
 afterlog.configure({
   adapter: createConsoleAdapter()
-});
+})
 ```
 
 Now you can create builders anywhere:
@@ -19,14 +19,14 @@ async function handleRequest(req) {
   const builder = afterlog.createBuilder({
     http_method: req.method,
     path: req.path
-  });
+  })
 
   try {
-    const user = await getUser(req.userId);
-    builder.set('user_id', user.id);
-    return user;
+    const user = await getUser(req.userId)
+    builder.set("user_id", user.id)
+    return user
   } finally {
-    await afterlog.finalize(builder);
+    await afterlog.finalize(builder)
   }
 }
 ```
@@ -36,16 +36,16 @@ async function handleRequest(req) {
 Use `set()` for simple values:
 
 ```typescript
-builder.set('customer_tier', 'enterprise');
-builder.set('request_bytes', 2048);
+builder.set("customer_tier", "enterprise")
+builder.set("request_bytes", 2048)
 ```
 
 Use `merge()` for nested objects:
 
 ```typescript
-builder.merge('metadata', { region: 'us-east-1' });
-builder.merge('metadata', { zone: 'a' });
-// metadata is now { region: 'us-east-1', zone: 'a' }
+builder.merge("metadata", { region: "us-east-1" })
+builder.merge("metadata", { zone: "a" })
+// metadata is now { region: "us-east-1", zone: "a" }
 ```
 
 ## Timing things
@@ -53,17 +53,17 @@ builder.merge('metadata', { zone: 'a' });
 The `timing()` method wraps async functions and records how long they took:
 
 ```typescript
-const result = await builder.timing('database', async () => {
-  return await db.query('SELECT * FROM users');
-});
+const result = await builder.timing("database", async () => {
+  return await db.query("SELECT * FROM users")
+})
 ```
 
 Or manually mark start and end:
 
 ```typescript
-builder.time('external_api');
-const response = await fetch('https://api.example.com');
-builder.timeEnd('external_api');
+builder.time("external_api")
+const response = await fetch("https://api.example.com")
+builder.timeEnd("external_api")
 ```
 
 Both approaches add entries to the `timings` field in the final output.
@@ -74,9 +74,9 @@ Call `error()` when something goes wrong:
 
 ```typescript
 try {
-  await riskyOperation();
+  await riskyOperation()
 } catch (err) {
-  builder.error(err, { component: 'payment' });
+  builder.error(err, { component: "payment" })
 }
 ```
 
@@ -116,7 +116,7 @@ By default, afterlog samples at 5%. You probably don't need every single request
 Configure sampling rules to keep important events:
 
 ```typescript
-import { errorRule, createLatencyRule } from 'afterlog';
+import { errorRule, createLatencyRule } from "afterlog"
 
 afterlog.configure({
   adapter: myAdapter,
@@ -127,7 +127,7 @@ afterlog.configure({
     ],
     default_rate: 0.05   // 5% of everything else
   }
-});
+})
 ```
 
 The sampling decision happens at the end of the request when we have all the data.
@@ -137,9 +137,9 @@ The sampling decision happens at the end of the request when we have all the dat
 An adapter decides where logs go. The console adapter prints to stdout:
 
 ```typescript
-import { createConsoleAdapter } from 'afterlog';
+import { createConsoleAdapter } from "afterlog"
 
-const adapter = createConsoleAdapter({ format: 'json' });
+const adapter = createConsoleAdapter({ format: "json" })
 ```
 
 Write your own by implementing the `LoggerAdapter` interface:
@@ -147,9 +147,9 @@ Write your own by implementing the `LoggerAdapter` interface:
 ```typescript
 const myAdapter = {
   emit: async (event) => {
-    await sendToDatadog(event);
+    await sendToDatadog(event)
   }
-};
+}
 ```
 
 ## Next steps

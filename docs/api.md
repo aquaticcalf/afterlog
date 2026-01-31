@@ -11,9 +11,9 @@ Sets up the global instance. Must be called before using other methods.
 ```typescript
 afterlog.configure({
   adapter: myAdapter,
-  service: 'user-api',
-  version: '1.2.3'
-});
+  service: "user-api",
+  version: "1.2.3"
+})
 ```
 
 Options:
@@ -30,9 +30,9 @@ Creates a new Builder for a request.
 
 ```typescript
 const builder = afterlog.createBuilder({
-  http_method: 'GET',
-  path: '/api/users'
-});
+  http_method: "GET",
+  path: "/api/users"
+})
 ```
 
 The `init` object can include any fields you want in the final event. Common ones are `http_method`, `path`, `trace_id`.
@@ -42,7 +42,7 @@ The `init` object can include any fields you want in the final event. Common one
 Finalizes the builder and emits the event if sampled.
 
 ```typescript
-const emitted = await afterlog.finalize(builder);
+const emitted = await afterlog.finalize(builder)
 // emitted is true if the event was sent to the adapter
 ```
 
@@ -53,7 +53,7 @@ Returns a promise that resolves to boolean. Always call this, even if you don't 
 Flushes any buffered events. Use this during graceful shutdown.
 
 ```typescript
-await afterlog.flush();
+await afterlog.flush()
 ```
 
 ### destroy()
@@ -61,7 +61,7 @@ await afterlog.flush();
 Cleans up resources.
 
 ```typescript
-await afterlog.destroy();
+await afterlog.destroy()
 ```
 
 ### isHealthy()
@@ -69,7 +69,7 @@ await afterlog.destroy();
 Checks if adapters are working.
 
 ```typescript
-const healthy = afterlog.isHealthy();
+const healthy = afterlog.isHealthy()
 ```
 
 Returns boolean.
@@ -79,7 +79,7 @@ Returns boolean.
 Gets adapter metrics.
 
 ```typescript
-const metrics = afterlog.getMetrics();
+const metrics = afterlog.getMetrics()
 // { eventsEmitted: 1000, eventsFailed: 2, ... }
 ```
 
@@ -92,8 +92,8 @@ Created by `afterlog.createBuilder()`. Accumulates data throughout a request.
 Sets a field on the event.
 
 ```typescript
-builder.set('user_id', '123');
-builder.set('order_total', 99.99);
+builder.set("user_id", "123")
+builder.set("order_total", 99.99)
 ```
 
 Overwrites any existing value.
@@ -103,9 +103,9 @@ Overwrites any existing value.
 Deep merges into a nested object.
 
 ```typescript
-builder.merge('metadata', { source: 'web' });
-builder.merge('metadata', { campaign: 'summer_sale' });
-// metadata ends up as { source: 'web', campaign: 'summer_sale' }
+builder.merge("metadata", { source: "web" })
+builder.merge("metadata", { campaign: "summer_sale" })
+// metadata ends up as { source: "web", campaign: "summer_sale" }
 ```
 
 ### enrich(key, value)
@@ -113,7 +113,7 @@ builder.merge('metadata', { campaign: 'summer_sale' });
 Adds enrichment data. Similar to merge but for data that gets added at finalize time.
 
 ```typescript
-builder.enrich('computed', { expensive_field: calculateValue() });
+builder.enrich("computed", { expensive_field: calculateValue() })
 ```
 
 ### time(name)
@@ -121,7 +121,7 @@ builder.enrich('computed', { expensive_field: calculateValue() });
 Marks the start of a timing.
 
 ```typescript
-builder.time('database');
+builder.time("database")
 ```
 
 ### timeEnd(name)
@@ -129,7 +129,7 @@ builder.time('database');
 Marks the end of a timing.
 
 ```typescript
-builder.timeEnd('database');
+builder.timeEnd("database")
 ```
 
 Throws if you call timeEnd without a matching time.
@@ -139,9 +139,9 @@ Throws if you call timeEnd without a matching time.
 Times an async function automatically.
 
 ```typescript
-const result = await builder.timing('api_call', async () => {
-  return await fetch('/api/data');
-});
+const result = await builder.timing("api_call", async () => {
+  return await fetch("/api/data")
+})
 ```
 
 If the function throws, the error is still recorded in timings with a `failed: true` flag, then re-thrown.
@@ -151,8 +151,8 @@ If the function throws, the error is still recorded in timings with a `failed: t
 Records an error.
 
 ```typescript
-builder.error(new Error('Database timeout'));
-builder.error(err, { component: 'payment', retry_count: 3 });
+builder.error(new Error("Database timeout"))
+builder.error(err, { component: "payment", retry_count: 3 })
 ```
 
 Normalizes errors into a standard format with message, stack, type, and context.
@@ -162,7 +162,7 @@ Normalizes errors into a standard format with message, stack, type, and context.
 Finalizes the builder locally. Usually you call `afterlog.finalize(builder)` instead.
 
 ```typescript
-const finalized = builder.finalize();
+const finalized = builder.finalize()
 ```
 
 Returns a `Finalized` object with all the collected data.
@@ -174,13 +174,13 @@ Returns a `Finalized` object with all the collected data.
 A built-in rule that always samples events containing errors.
 
 ```typescript
-import { errorRule } from 'afterlog';
+import { errorRule } from "afterlog"
 
 afterlog.configure({
   sampling: {
     rules: [errorRule]
   }
-});
+})
 ```
 
 ### createLatencyRule(config)
@@ -192,7 +192,7 @@ const rule = createLatencyRule({
   threshold_ms: 1000,
   sample_rate: 1.0,      // Sample 100% of slow requests
   priority: 10
-});
+})
 ```
 
 ### createRandomRule(rate, priority?)
@@ -200,7 +200,7 @@ const rule = createLatencyRule({
 Random sampling at a fixed rate.
 
 ```typescript
-const rule = createRandomRule(0.01, 100);  // 1% sample
+const rule = createRandomRule(0.01, 100)  // 1% sample
 ```
 
 ### createConsistentRule(config)
@@ -211,7 +211,7 @@ Consistent sampling based on trace_id. Same trace_id always gets the same decisi
 const rule = createConsistentRule({
   sample_rate: 0.1,
   priority: 50
-});
+})
 ```
 
 ### Custom rules
@@ -220,14 +220,14 @@ Implement the `SamplingRule` interface:
 
 ```typescript
 const myRule: SamplingRule = {
-  name: 'vip_users',
+  name: "vip_users",
   priority: 5,
   evaluate: (event) => {
-    if (event.user_tier === 'vip') {
-      return { sampled: true, rate: 1.0, reason: 'vip_user' };
+    if (event.user_tier === "vip") {
+      return { sampled: true, rate: 1.0, reason: "vip_user" }
     }
   }
-};
+}
 ```
 
 Rules are evaluated in priority order (lowest number first). The first rule that returns a decision wins.
@@ -240,8 +240,8 @@ Built-in adapter that logs to console.
 
 ```typescript
 const adapter = createConsoleAdapter({
-  format: 'json'  // or 'pretty'
-});
+  format: "json"  // or "pretty"
+})
 ```
 
 ### LoggerAdapter interface
@@ -284,5 +284,5 @@ import type {
   TimingStats,
   NormalizedError,
   Lifecycle
-} from 'afterlog';
+} from "afterlog"
 ```
