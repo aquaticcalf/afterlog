@@ -15,7 +15,7 @@ builder.set("user_id", "123")
 const user = await builder.timing("database", () => db.getUser("123"))
 
 await afterlog.finalize(builder)
-// {"request_id":"abc","trace_id":"xyz","http_method":"GET",...}
+// {"request_id":"550e8400-...","trace_id":"a12b34cd-...","http_method":"GET",...}
 ```
 
 ## Install
@@ -85,8 +85,8 @@ app.get("/users/:id", async (req, res) => {
 
 One JSON object per request with:
 
-- `request_id` - unique per request
-- `trace_id` - shared across services
+- `request_id` - UUID unique per request
+- `trace_id` - UUID shared across services (auto-generated if not provided)
 - `timings` - how long each operation took
 - `error` - normalized error info
 - Your custom fields
@@ -94,7 +94,7 @@ One JSON object per request with:
 ```json
 {
   "request_id": "550e8400-e29b-41d4-a716-446655440000",
-  "trace_id": "trace-abc123",
+  "trace_id": "a12b34cd-5678-90ef-abcd-1234567890ab",
   "timestamp": "2024-01-15T10:30:00.000Z",
   "http_method": "GET",
   "path": "/users/123",
