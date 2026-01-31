@@ -36,7 +36,7 @@ Creates a builder for a request.
 const builder = afterlog.createBuilder({
   http_method: "GET",
   path: "/api/users",
-  trace_id: "abc123"
+  trace_id: "a12b34cd-5678-40ef-abcd-1234567890ab"
 })
 ```
 

@@ -69,7 +69,7 @@ Output:
 ```json
 {
   "request_id": "550e8400-e29b-41d4-a716-446655440000",
-  "trace_id": "trace-abc123",
+  "trace_id": "a12b34cd-5678-40ef-abcd-1234567890ab",
   "timestamp": "2024-01-15T10:30:00.000Z",
   "http_method": "GET",
   "path": "/users/123",
