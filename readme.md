@@ -7,7 +7,7 @@ import { afterlog } from "afterlog"
 
 const builder = afterlog.createBuilder({
   http_method: "GET",
-  path: "/users/123"
+  path: "/users/123",
 })
 
 builder.set("user_id", "123")
@@ -26,6 +26,7 @@ await afterlog.finalize(builder)
 ```bash
 bun add afterlog
 ```
+
 </details>
 
 <details>
@@ -34,6 +35,7 @@ bun add afterlog
 ```bash
 npm install afterlog
 ```
+
 </details>
 
 <details>
@@ -42,6 +44,7 @@ npm install afterlog
 ```bash
 yarn add afterlog
 ```
+
 </details>
 
 <details>
@@ -50,6 +53,7 @@ yarn add afterlog
 ```bash
 pnpm add afterlog
 ```
+
 </details>
 
 ## Quick Start
@@ -60,7 +64,7 @@ Configure once:
 import { afterlog, createConsoleAdapter } from "afterlog"
 
 afterlog.configure({
-  adapter: createConsoleAdapter()
+  adapter: createConsoleAdapter(),
 })
 ```
 
@@ -70,7 +74,7 @@ Use in your routes:
 app.get("/users/:id", async (req, res) => {
   const builder = afterlog.createBuilder({
     http_method: req.method,
-    path: req.path
+    path: req.path,
   })
 
   const user = await builder.timing("db", () => db.getUser(req.params.id))
@@ -109,6 +113,7 @@ One JSON object per request with:
 ## Why Wide Events?
 
 Traditional logging:
+
 ```
 [10:30:00] GET /users/123
 [10:30:00] Database query: SELECT * FROM users WHERE id=123
@@ -117,8 +122,9 @@ Traditional logging:
 ```
 
 Wide event logging:
+
 ```json
-{"http_method":"GET","path":"/users/123","timings":{"db":1000,"cache":50}}
+{ "http_method": "GET", "path": "/users/123", "timings": { "db": 1000, "cache": 50 } }
 ```
 
 - Query by any field
@@ -141,9 +147,9 @@ const datadogAdapter = {
     await fetch("https://http-intake.logs.datadoghq.com/v1/input", {
       method: "POST",
       headers: { "DD-API-KEY": process.env.DD_API_KEY },
-      body: JSON.stringify(event)
+      body: JSON.stringify(event),
     })
-  }
+  },
 }
 
 afterlog.configure({ adapter: datadogAdapter })
@@ -162,11 +168,11 @@ afterlog.configure({
   adapter: myAdapter,
   sampling: {
     rules: [
-      errorRule,  // Always log errors
-      createLatencyRule({ threshold_ms: 1000, sample_rate: 1.0 })  // Always log slow requests
+      errorRule, // Always log errors
+      createLatencyRule({ threshold_ms: 1000, sample_rate: 1.0 }), // Always log slow requests
     ],
-    default_rate: 0.05  // 5% of the rest
-  }
+    default_rate: 0.05, // 5% of the rest
+  },
 })
 ```
 

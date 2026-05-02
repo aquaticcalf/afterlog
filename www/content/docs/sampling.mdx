@@ -22,11 +22,11 @@ afterlog.configure({
   service: "my-api",
   sampling: {
     rules: [
-      errorRule,  // Always log errors
-      createLatencyRule({ alwaysSampleAbove: 5000 })  // Always log >5s requests
+      errorRule, // Always log errors
+      createLatencyRule({ alwaysSampleAbove: 5000 }), // Always log >5s requests
     ],
-    defaultRate: 0.05  // 5% of everything else
-  }
+    defaultRate: 0.05, // 5% of everything else
+  },
 })
 ```
 
@@ -57,13 +57,13 @@ import { createLatencyRule } from "afterlog"
 createLatencyRule({
   // Always sample above this threshold (ms)
   alwaysSampleAbove: 5000,
-  
+
   // Custom thresholds
   thresholds: [
     { durationMs: 2000, rate: 0.5 },
     { durationMs: 1000, rate: 0.25 },
-    { durationMs: 500, rate: 0.1 }
-  ]
+    { durationMs: 500, rate: 0.1 },
+  ],
 })
 ```
 
@@ -78,7 +78,7 @@ import { createConsistentRule } from "afterlog"
 
 createConsistentRule({
   rate: 0.1,
-  hashField: "trace_id"  // field to hash
+  hashField: "trace_id", // field to hash
 })
 ```
 
@@ -91,7 +91,7 @@ Random sampling with fixed rate.
 ```typescript
 import { createRandomRule } from "afterlog"
 
-createRandomRule(0.01)  // 1% sample rate
+createRandomRule(0.01) // 1% sample rate
 ```
 
 ## Custom Rules
@@ -103,14 +103,14 @@ import type { SamplingRule } from "afterlog"
 
 const vipRule: SamplingRule = {
   name: "vip_users",
-  priority: 5,  // Lower = evaluated first
-  
+  priority: 5, // Lower = evaluated first
+
   evaluate(event) {
     if (event.user_tier === "vip") {
       return { sampled: true, rate: 1.0, reason: "vip" }
     }
     // Return undefined to try next rule
-  }
+  },
 }
 ```
 
@@ -121,10 +121,10 @@ Rules are evaluated in priority order (lowest first). First rule with a decision
 ```typescript
 sampling: {
   rules: [
-    errorRule,           // priority 0
+    errorRule, // priority 0
     createLatencyRule(), // priority 10
-    createConsistentRule({ rate: 0.1 }),  // priority 900
-    createRandomRule(0.05)  // priority 1000 (fallback)
+    createConsistentRule({ rate: 0.1 }), // priority 900
+    createRandomRule(0.05), // priority 1000 (fallback)
   ]
 }
 ```
@@ -146,9 +146,9 @@ interface SamplingRule {
 ```typescript
 interface SamplingDecision {
   sampled: boolean
-  rate: number  // 1.0 = 100%, 0.05 = 5%
-  reason: string  // For debugging
-  metadata?: Record<string, unknown>  // Additional info
+  rate: number // 1.0 = 100%, 0.05 = 5%
+  reason: string // For debugging
+  metadata?: Record<string, unknown> // Additional info
 }
 ```
 
@@ -157,7 +157,7 @@ interface SamplingDecision {
 ```typescript
 interface SamplingConfig {
   rules: SamplingRule[]
-  defaultRate?: number  // Default: 0.05
-  addSamplingMetadata?: boolean  // Add to event: Default: true
+  defaultRate?: number // Default: 0.05
+  addSamplingMetadata?: boolean // Add to event: Default: true
 }
 ```

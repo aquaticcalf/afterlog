@@ -12,7 +12,7 @@ import {
   AfterlogError,
   normalize,
   extractTraceId,
-  
+
   // Types
   WideEvent,
   BaseWideEvent,
@@ -22,13 +22,13 @@ import {
   TimingStats,
   State,
   Finalized,
-  
+
   // Singleton
   afterlog,
   Afterlog,
   AfterlogNotConfiguredError,
   SingletonConfig,
-  
+
   // Sampling
   SamplingEngine,
   errorRule,
@@ -40,7 +40,7 @@ import {
   SamplingConfig,
   LatencyConfig,
   ConsistentConfig,
-  
+
   // Adapters
   AdapterManager,
   createConsoleAdapter,
@@ -48,7 +48,7 @@ import {
   LoggerAdapter,
   AdapterMetrics,
   EmitHook,
-  ErrorHook
+  ErrorHook,
 } from "afterlog"
 ```
 
@@ -195,7 +195,7 @@ interface Clock {
 ```typescript
 type Enricher<T extends BaseWideEvent> = (
   event: Partial<T>,
-  meta: Map<string, unknown>
+  meta: Map<string, unknown>,
 ) => Partial<T> | void
 ```
 
@@ -264,10 +264,12 @@ interface State<T extends BaseWideEvent> {
 ### Finalized
 
 ```typescript
-type Finalized<T extends BaseWideEvent> = Readonly<T & {
-  readonly duration_ms: number
-  readonly outcome: "success" | "error" | "timeout" | "cancelled"
-}>
+type Finalized<T extends BaseWideEvent> = Readonly<
+  T & {
+    readonly duration_ms: number
+    readonly outcome: "success" | "error" | "timeout" | "cancelled"
+  }
+>
 ```
 
 ### NormalizedError
@@ -313,7 +315,7 @@ type EmitHook<T extends BaseWideEvent> = (event: Finalized<T>) => void | Promise
 ```typescript
 type ErrorHook<T extends BaseWideEvent> = (
   error: Error,
-  event?: Finalized<T>
+  event?: Finalized<T>,
 ) => void | Promise<void>
 ```
 

@@ -30,7 +30,7 @@ import { afterlog, createConsoleAdapter } from "afterlog"
 
 afterlog.configure({
   adapter: createConsoleAdapter(),
-  service: "my-api"
+  service: "my-api",
 })
 ```
 
@@ -44,7 +44,7 @@ In any request handler, create a builder, add data, and finalize:
 app.get("/users/:id", async (req, res) => {
   const builder = afterlog.createBuilder({
     http_method: req.method,
-    path: req.path
+    path: req.path,
   })
 
   const user = await builder.timing("db", () => db.getUser(req.params.id))

@@ -10,7 +10,7 @@ The Builder class accumulates context during a request and produces a wide event
 ```typescript
 const builder = afterlog.createBuilder({
   http_method: "GET",
-  path: "/api/users"
+  path: "/api/users",
 })
 ```
 
@@ -116,6 +116,7 @@ builder.error(err, { component: "payment", amount: 100 })
 ```
 
 Error is normalized with:
+
 - `type` - Error constructor name
 - `message` - Error message
 - `stack` - Stack trace (if available)
@@ -141,7 +142,7 @@ Completes the event and returns immutable output:
 const event = builder.finalize()
 // Returns readonly object with:
 // - request_id
-// - trace_id  
+// - trace_id
 // - timestamp
 // - duration_ms
 // - timings
@@ -153,7 +154,7 @@ Usually you'll call `afterlog.finalize(builder)` instead, which handles sampling
 
 ## Reading State
 
-### snapshot_()
+### snapshot\_()
 
 Returns current state without finalizing:
 
@@ -163,7 +164,7 @@ const snapshot = builder.snapshot_()
 
 Uses caching - returns same reference until modified.
 
-### state_
+### state\_
 
 Current lifecycle state: `created` | `building` | `finalizing` | `emitted`
 
@@ -186,7 +187,7 @@ function loggingMiddleware() {
   return (req, res, next) => {
     const builder = afterlog.createBuilder({
       http_method: req.method,
-      path: req.path
+      path: req.path,
     })
 
     req.log = builder

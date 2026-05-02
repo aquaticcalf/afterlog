@@ -71,7 +71,7 @@ The pattern has three steps:
 // 1. Create builder
 const builder = afterlog.createBuilder({
   http_method: req.method,
-  path: req.path
+  path: req.path,
 })
 
 // 2. Add data during the request
@@ -95,13 +95,13 @@ That's it. The builder accumulates everything throughout the request lifecycle a
 
 ## Comparison
 
-| | Narrow Logging | Wide Events |
-|---|---|---|
-| One request | Many log lines | One JSON object |
-| Query by user | Text search | Filter by field |
-| Query by error | Grep for "error" | Filter by error.type |
-| Timing breakdown | Manual calculation | Built in |
-| Distributed tracing | Hard to correlate | Shared trace_id |
+|                     | Narrow Logging     | Wide Events          |
+| ------------------- | ------------------ | -------------------- |
+| One request         | Many log lines     | One JSON object      |
+| Query by user       | Text search        | Filter by field      |
+| Query by error      | Grep for "error"   | Filter by error.type |
+| Timing breakdown    | Manual calculation | Built in             |
+| Distributed tracing | Hard to correlate  | Shared trace_id      |
 
 ## Quick Example
 
@@ -110,12 +110,12 @@ import { afterlog, createConsoleAdapter } from "afterlog"
 
 afterlog.configure({
   adapter: createConsoleAdapter(),
-  service: "my-api"
+  service: "my-api",
 })
 
 const builder = afterlog.createBuilder({
   http_method: "GET",
-  path: "/users/123"
+  path: "/users/123",
 })
 
 builder.set("user_id", "123")
