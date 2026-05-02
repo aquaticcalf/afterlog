@@ -1,0 +1,383 @@
+---
+title: API Reference
+description: All types and exports
+---
+
+## Main Exports
+
+```typescript
+import {
+  // Builder
+  Builder,
+  AfterlogError,
+  normalize,
+  extractTraceId,
+  
+  // Types
+  WideEvent,
+  BaseWideEvent,
+  HttpWideEvent,
+  WideEventError,
+  Lifecycle,
+  TimingStats,
+  State,
+  Finalized,
+  
+  // Singleton
+  afterlog,
+  Afterlog,
+  AfterlogNotConfiguredError,
+  SingletonConfig,
+  
+  // Sampling
+  SamplingEngine,
+  errorRule,
+  createLatencyRule,
+  createRandomRule,
+  createConsistentRule,
+  SamplingDecision,
+  SamplingRule,
+  SamplingConfig,
+  LatencyConfig,
+  ConsistentConfig,
+  
+  // Adapters
+  AdapterManager,
+  createConsoleAdapter,
+  ConsoleAdapterOptions,
+  LoggerAdapter,
+  AdapterMetrics,
+  EmitHook,
+  ErrorHook
+} from "afterlog"
+```
+
+## Singleton
+
+### afterlog.configure()
+
+```typescript
+afterlog.configure(config: SingletonConfig<T>): void
+```
+
+Configure the global instance. Call once at startup.
+
+### afterlog.createBuilder()
+
+```typescript
+afterlog.createBuilder(init?: Init): Builder<T>
+```
+
+Create a builder for a request.
+
+### afterlog.finalize()
+
+```typescript
+afterlog.finalize(builder: Builder<T>): Promise<void>
+```
+
+Finalize builder and emit if sampled.
+
+### afterlog.flush()
+
+```typescript
+afterlog.flush(): Promise<void>
+```
+
+Flush buffered events.
+
+### afterlog.destroy()
+
+```typescript
+afterlog.destroy(): Promise<void>
+```
+
+Clean up resources.
+
+### afterlog.isHealthy()
+
+```typescript
+afterlog.isHealthy(): Promise<boolean>
+```
+
+Check if adapters are working.
+
+### afterlog.getMetrics()
+
+```typescript
+afterlog.getMetrics(): AdapterMetrics | null
+```
+
+Get adapter metrics.
+
+## Types
+
+### WideEvent
+
+```typescript
+interface WideEvent extends HttpWideEvent {
+  [key: string]: unknown
+}
+```
+
+### BaseWideEvent
+
+```typescript
+interface BaseWideEvent {
+  readonly request_id: UUID
+  readonly trace_id: UUID
+  readonly timestamp: string
+  readonly service?: string
+  readonly version?: string
+  readonly region?: string
+  readonly deployment_id?: string
+  readonly environment?: string
+}
+```
+
+### HttpWideEvent
+
+```typescript
+interface HttpWideEvent extends BaseWideEvent {
+  http_method?: string
+  path?: string
+  query?: Record<string, string>
+  http_status_code?: number
+  request_duration_ms?: number
+  request_outcome?: "success" | "error" | "timeout" | "cancelled"
+  request_bytes?: number
+  response_bytes?: number
+  error?: WideEventError
+  timings?: Record<string, number>
+}
+```
+
+### WideEventError
+
+```typescript
+interface WideEventError {
+  type: string
+  message: string
+  code?: string | null
+  stack?: string | null
+  retriable?: boolean
+  context?: Record<string, unknown>
+}
+```
+
+### SingletonConfig
+
+```typescript
+interface SingletonConfig<T extends BaseWideEvent> {
+  adapter: LoggerAdapter<T>
+  sampling?: SamplingConfig
+  service: string
+  version?: string
+  region?: string
+  deployment_id?: string
+  environment?: string
+  clock?: Clock
+  timeout_ms?: number
+}
+```
+
+### Clock
+
+```typescript
+interface Clock {
+  now(): number
+  elapsed(start: number): number
+}
+```
+
+### Enricher
+
+```typescript
+type Enricher<T extends BaseWideEvent> = (
+  event: Partial<T>,
+  meta: Map<string, unknown>
+) => Partial<T> | void
+```
+
+### Config
+
+```typescript
+interface Config<T extends BaseWideEvent> {
+  service?: string
+  version?: string
+  region?: string
+  deployment_id?: string
+  environment?: string
+  clock?: Clock
+  enrichers?: Enricher<T>[]
+  timeout_ms?: number
+}
+```
+
+### Init
+
+```typescript
+interface Init {
+  request_id?: UUID
+  trace_id?: UUID
+  parent_span_id?: string
+  method?: string
+  path?: string
+  headers?: Record<string, string>
+}
+```
+
+### Lifecycle
+
+```typescript
+type Lifecycle = "created" | "building" | "finalizing" | "emitted" | "dropped"
+```
+
+### TimingStats
+
+```typescript
+interface TimingStats {
+  count: number
+  total_ms: number
+  min_ms: number
+  max_ms: number
+  avg_ms: number
+}
+```
+
+### State
+
+```typescript
+interface State<T extends BaseWideEvent> {
+  readonly id: UUID
+  lifecycle: Lifecycle
+  readonly startTime: number
+  readonly base: { ... }
+  context: Partial<T>
+  timers: Map<string, number>
+  timings: Map<string, TimingStats>
+  errors: NormalizedError[]
+  meta: Map<string, unknown>
+}
+```
+
+### Finalized
+
+```typescript
+type Finalized<T extends BaseWideEvent> = Readonly<T & {
+  readonly duration_ms: number
+  readonly outcome: "success" | "error" | "timeout" | "cancelled"
+}>
+```
+
+### NormalizedError
+
+```typescript
+interface NormalizedError extends WideEventError {
+  original: unknown
+}
+```
+
+### LoggerAdapter
+
+```typescript
+interface LoggerAdapter<T extends BaseWideEvent> {
+  emit(event: Finalized<T>): void | Promise<void>
+  flush?(): Promise<void>
+  destroy?(): Promise<void>
+  isHealthy?(): boolean | Promise<boolean>
+}
+```
+
+### AdapterMetrics
+
+```typescript
+interface AdapterMetrics {
+  eventsEmitted: number
+  eventsFailed: number
+  bytesEmitted: number
+  lastEmitTime: Date | null
+  lastErrorTime: Date | null
+  averageEmitDurationMs: number
+}
+```
+
+### EmitHook
+
+```typescript
+type EmitHook<T extends BaseWideEvent> = (event: Finalized<T>) => void | Promise<void>
+```
+
+### ErrorHook
+
+```typescript
+type ErrorHook<T extends BaseWideEvent> = (
+  error: Error,
+  event?: Finalized<T>
+) => void | Promise<void>
+```
+
+### SamplingDecision
+
+```typescript
+interface SamplingDecision {
+  sampled: boolean
+  rate: number
+  reason: string
+  metadata?: Record<string, unknown>
+}
+```
+
+### SamplingRule
+
+```typescript
+interface SamplingRule<T extends BaseWideEvent> {
+  readonly name: string
+  readonly priority: number
+  evaluate(event: T): SamplingDecision | undefined
+}
+```
+
+### SamplingConfig
+
+```typescript
+interface SamplingConfig<T extends BaseWideEvent> {
+  rules: SamplingRule<T>[]
+  defaultRate?: number
+  addSamplingMetadata?: boolean
+}
+```
+
+### LatencyConfig
+
+```typescript
+interface LatencyConfig {
+  alwaysSampleAbove?: number
+  thresholds?: Array<{ durationMs: number; rate: number }>
+}
+```
+
+### ConsistentConfig
+
+```typescript
+interface ConsistentConfig {
+  rate: number
+  hashField?: string
+}
+```
+
+### ConsoleAdapterOptions
+
+```typescript
+interface ConsoleAdapterOptions {
+  method?: "log" | "info" | "warn" | "error" | "debug"
+  pretty?: boolean
+  includeTimestamp?: boolean
+}
+```
+
+### UUID
+
+```typescript
+type UUID = string & { readonly __brand: unique symbol }
+```

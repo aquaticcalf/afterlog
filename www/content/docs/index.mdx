@@ -1,0 +1,148 @@
+---
+title: Introduction
+description: Structured logging for TypeScript - one JSON object per request
+---
+
+# afterlog
+
+Structured logging for TypeScript. One JSON object per request.
+
+## What is a Wide Event?
+
+Most apps write logs like this:
+
+```text
+[10:30:00] GET /users/123
+[10:30:00] Database query started
+[10:30:00] SELECT * FROM users WHERE id=123
+[10:30:01] Cache miss for user:123
+[10:30:02] Response: 200 (1500ms)
+```
+
+This is called **narrow logging** - each line captures one moment in time. To understand what happened, you have to read many lines and piece it together mentally.
+
+A **wide event** captures an entire request in one JSON object:
+
+```json
+{
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "trace_id": "a12b34cd-5678-40ef-abcd-1234567890ab",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "http_method": "GET",
+  "path": "/users/123",
+  "user_id": "123",
+  "http_status_code": 200,
+  "timings": {
+    "database": 45,
+    "cache": 5
+  },
+  "duration_ms": 1500
+}
+```
+
+One line. One request. Every field is structured. Every field is queryable.
+
+## Why Wide Events?
+
+With narrow logs, you can't easily answer questions like:
+
+- "How many requests did user 456 make today?"
+- "What's the average database time for 500 errors?"
+- "Show me all requests where both the database and cache were slow"
+
+With wide events, these are simple filters:
+
+```sql
+-- Wide events let you query like a database
+SELECT * FROM logs WHERE user_id = '456'
+SELECT AVG(timings.database) FROM logs WHERE http_status_code = 500
+SELECT * FROM logs WHERE timings.database > 500 AND timings.cache > 100
+```
+
+## How It Works
+
+The pattern has three steps:
+
+1. **Create a builder** at request start
+2. **Add data** as the request runs - fields, timings, errors
+3. **Finalize** at the end - one JSON object is emitted
+
+```typescript
+// 1. Create builder
+const builder = afterlog.createBuilder({
+  http_method: req.method,
+  path: req.path
+})
+
+// 2. Add data during the request
+builder.set("user_id", "123")
+
+const user = await builder.timing("database", () => db.getUser("123"))
+
+// 3. Finalize - emits one JSON object
+await afterlog.finalize(builder)
+```
+
+That's it. The builder accumulates everything throughout the request lifecycle and outputs one structured event.
+
+## Key Features
+
+- **One JSON per request** - Everything about a request in one place
+- **Automatic timing** - Wrap any async function with `builder.timing()`
+- **Error normalization** - Any error becomes structured data
+- **Sampling** - Always log errors, sample slow requests, drop the rest
+- **Custom adapters** - Send logs to Datadog, CloudWatch, files, anywhere
+
+## Comparison
+
+| | Narrow Logging | Wide Events |
+|---|---|---|
+| One request | Many log lines | One JSON object |
+| Query by user | Text search | Filter by field |
+| Query by error | Grep for "error" | Filter by error.type |
+| Timing breakdown | Manual calculation | Built in |
+| Distributed tracing | Hard to correlate | Shared trace_id |
+
+## Quick Example
+
+```typescript
+import { afterlog, createConsoleAdapter } from "afterlog"
+
+afterlog.configure({
+  adapter: createConsoleAdapter(),
+  service: "my-api"
+})
+
+const builder = afterlog.createBuilder({
+  http_method: "GET",
+  path: "/users/123"
+})
+
+builder.set("user_id", "123")
+
+const user = await builder.timing("database", () => db.getUser("123"))
+
+await afterlog.finalize(builder)
+```
+
+Output:
+
+```json
+{
+  "request_id": "550e8400-...",
+  "trace_id": "a12b34cd-...",
+  "http_method": "GET",
+  "path": "/users/123",
+  "user_id": "123",
+  "timings": {
+    "database": 45
+  }
+}
+```
+
+## Next Steps
+
+- [Getting Started](/docs/getting-started) - Install and configure
+- [Builder](/docs/builder) - All builder methods and state machine
+- [Sampling](/docs/sampling) - Sample unwanted events to reduce log volume
+- [Adapters](/docs/adapters) - Send logs to Datadog, CloudWatch, files, anywhere

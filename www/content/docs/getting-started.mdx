@@ -1,0 +1,195 @@
+---
+title: Getting Started
+description: Install and configure afterlog
+---
+
+## Installation
+
+```bash title="bun"
+bun add afterlog
+```
+
+```bash title="npm"
+npm install afterlog
+```
+
+```bash title="yarn"
+yarn add afterlog
+```
+
+```bash title="pnpm"
+pnpm add afterlog
+```
+
+## Configure Once
+
+Set up afterlog at the start of your app:
+
+```typescript
+import { afterlog, createConsoleAdapter } from "afterlog"
+
+afterlog.configure({
+  adapter: createConsoleAdapter(),
+  service: "my-api"
+})
+```
+
+That's all the setup you need. The console adapter prints JSON to stdout - use it for development.
+
+## Use Everywhere
+
+In any request handler, create a builder, add data, and finalize:
+
+```typescript
+app.get("/users/:id", async (req, res) => {
+  const builder = afterlog.createBuilder({
+    http_method: req.method,
+    path: req.path
+  })
+
+  const user = await builder.timing("db", () => db.getUser(req.params.id))
+  builder.set("user_id", user.id)
+
+  await afterlog.finalize(builder)
+  res.json(user)
+})
+```
+
+That's the core pattern. Every request follows the same three steps.
+
+## Adding Data
+
+### Set Fields
+
+Add any data you want to appear in the output:
+
+```typescript
+builder.set("user_id", "123")
+builder.set("http_status_code", 200)
+builder.set("customer_tier", "enterprise")
+```
+
+These become top-level fields in the JSON output.
+
+### Merge Nested Objects
+
+Deep merge into existing fields:
+
+```typescript
+builder.merge("user", { id: "123" })
+builder.merge("user", { tier: "premium" })
+
+// Output: { user: { id: "123", tier: "premium" } }
+```
+
+If the field doesn't exist yet, it's created. If it exists, objects are merged deeply.
+
+### Time Operations
+
+Wrap any async function to measure how long it takes:
+
+```typescript
+const user = await builder.timing("database", () => db.getUser(id))
+const data = await builder.timing("redis", () => cache.get("key"))
+```
+
+Output includes a `timings` field:
+
+```json
+{
+  "timings": {
+    "database": 45,
+    "redis": 5
+  }
+}
+```
+
+For timing multiple calls with the same name, stats are aggregated:
+
+```typescript
+await builder.timing("db", () => db.get(1))
+await builder.timing("db", () => db.get(2))
+
+// Output: { timings: { db: 90 } }
+// (total_ms is tracked internally)
+```
+
+Manual timing with `time` and `timeEnd`:
+
+```typescript
+builder.time("external_api")
+const result = await fetch("https://api.example.com")
+builder.timeEnd("external_api")
+```
+
+### Capture Errors
+
+Record errors with full context:
+
+```typescript
+try {
+  await stripe.charge({ amount: 1000 })
+} catch (err) {
+  builder.error(err, { component: "payment" })
+}
+```
+
+The error is normalized into structured data:
+
+```json
+{
+  "error": {
+    "type": "StripeError",
+    "message": "Card declined",
+    "code": "card_declined",
+    "stack": "at ...",
+    "context": { "component": "payment" }
+  }
+}
+```
+
+## Finalizing
+
+Always call `finalize` at the end of the request:
+
+```typescript
+await afterlog.finalize(builder)
+```
+
+This completes the event and sends it to your adapter. Always call this, even if an error occurred.
+
+## What Comes Out
+
+A single JSON object with:
+
+- `request_id` - Unique UUID for this request
+- `trace_id` - Shared trace UUID for distributed tracing
+- `timestamp` - ISO 8601 timestamp
+- `timings` - How long each operation took
+- `error` - Normalized error info (if any)
+- `duration_ms` - Total request duration
+- `outcome` - "success", "error", or "timeout"
+- Any custom fields you added
+
+```json
+{
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "trace_id": "a12b34cd-5678-40ef-abcd-1234567890ab",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "http_method": "GET",
+  "path": "/users/123",
+  "user_id": "123",
+  "timings": {
+    "database": 45,
+    "cache": 5
+  },
+  "duration_ms": 1500,
+  "outcome": "success"
+}
+```
+
+## Next Steps
+
+- [Builder](/docs/builder) - All builder methods and state machine
+- [Sampling](/docs/sampling) - Sample unwanted events to reduce log volume
+- [Adapters](/docs/adapters) - Send logs to Datadog, CloudWatch, files, anywhere

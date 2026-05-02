@@ -1,0 +1,163 @@
+---
+title: Sampling
+description: Sample events by error, latency, or consistent hash
+---
+
+Don't log everything. Use sampling rules to filter events based on conditions.
+
+## Why Sampling?
+
+- Reduce log volume in production
+- Always log errors (100%)
+- Always log slow requests
+- Consistent sampling for distributed tracing
+
+## Basic Setup
+
+```typescript
+import { afterlog, createConsoleAdapter, errorRule, createLatencyRule } from "afterlog"
+
+afterlog.configure({
+  adapter: createConsoleAdapter(),
+  service: "my-api",
+  sampling: {
+    rules: [
+      errorRule,  // Always log errors
+      createLatencyRule({ alwaysSampleAbove: 5000 })  // Always log >5s requests
+    ],
+    defaultRate: 0.05  // 5% of everything else
+  }
+})
+```
+
+## Built-in Rules
+
+### errorRule
+
+Always samples events with errors or 5xx status codes.
+
+```typescript
+import { errorRule } from "afterlog"
+
+sampling: {
+  rules: [errorRule]
+}
+```
+
+- Samples when `error` field exists
+- Samples when `status_code >= 500`
+
+### createLatencyRule
+
+Samples based on request duration.
+
+```typescript
+import { createLatencyRule } from "afterlog"
+
+createLatencyRule({
+  // Always sample above this threshold (ms)
+  alwaysSampleAbove: 5000,
+  
+  // Custom thresholds
+  thresholds: [
+    { durationMs: 2000, rate: 0.5 },
+    { durationMs: 1000, rate: 0.25 },
+    { durationMs: 500, rate: 0.1 }
+  ]
+})
+```
+
+Default thresholds: 2000ms (50%), 1000ms (25%), 500ms (10%).
+
+### createConsistentRule
+
+Same trace_id always gets same sampling decision. Essential for distributed tracing.
+
+```typescript
+import { createConsistentRule } from "afterlog"
+
+createConsistentRule({
+  rate: 0.1,
+  hashField: "trace_id"  // field to hash
+})
+```
+
+Uses a deterministic hash of the trace_id. Same trace = same sample rate.
+
+### createRandomRule
+
+Random sampling with fixed rate.
+
+```typescript
+import { createRandomRule } from "afterlog"
+
+createRandomRule(0.01)  // 1% sample rate
+```
+
+## Custom Rules
+
+Create your own sampling rule:
+
+```typescript
+import type { SamplingRule } from "afterlog"
+
+const vipRule: SamplingRule = {
+  name: "vip_users",
+  priority: 5,  // Lower = evaluated first
+  
+  evaluate(event) {
+    if (event.user_tier === "vip") {
+      return { sampled: true, rate: 1.0, reason: "vip" }
+    }
+    // Return undefined to try next rule
+  }
+}
+```
+
+## Rule Evaluation
+
+Rules are evaluated in priority order (lowest first). First rule with a decision wins.
+
+```typescript
+sampling: {
+  rules: [
+    errorRule,           // priority 0
+    createLatencyRule(), // priority 10
+    createConsistentRule({ rate: 0.1 }),  // priority 900
+    createRandomRule(0.05)  // priority 1000 (fallback)
+  ]
+}
+```
+
+## API Reference
+
+### SamplingRule
+
+```typescript
+interface SamplingRule {
+  readonly name: string
+  readonly priority: number
+  evaluate(event): SamplingDecision | undefined
+}
+```
+
+### SamplingDecision
+
+```typescript
+interface SamplingDecision {
+  sampled: boolean
+  rate: number  // 1.0 = 100%, 0.05 = 5%
+  reason: string  // For debugging
+  metadata?: Record<string, unknown>  // Additional info
+}
+```
+
+### SamplingConfig
+
+```typescript
+interface SamplingConfig {
+  rules: SamplingRule[]
+  defaultRate?: number  // Default: 0.05
+  addSamplingMetadata?: boolean  // Add to event: Default: true
+}
+```

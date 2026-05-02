@@ -1,0 +1,212 @@
+---
+title: Builder
+description: Accumulate context and create wide events
+---
+
+The Builder class accumulates context during a request and produces a wide event output.
+
+## Creating a Builder
+
+```typescript
+const builder = afterlog.createBuilder({
+  http_method: "GET",
+  path: "/api/users"
+})
+```
+
+Or use the Builder class directly:
+
+```typescript
+import { Builder } from "afterlog"
+
+const builder = new Builder<T>(config, init?)
+```
+
+### Options
+
+**Config** (first argument):
+
+- `service` - Service name
+- `version` - Service version
+- `region` - Deployment region
+- `deployment_id` - Git SHA or build number
+- `environment` - production/staging/etc
+- `clock` - Custom timing implementation
+- `timeout_ms` - Timeout threshold
+
+**Init** (second argument):
+
+- `request_id` - Override request UUID
+- `trace_id` - Override trace UUID (for distributed tracing)
+- `method` - HTTP method
+- `path` - Request path
+- `headers` - Headers for trace extraction
+
+## Setting Fields
+
+### set(key, value)
+
+Sets a top-level field. Overwrites existing values.
+
+```typescript
+builder.set("user_id", "123")
+builder.set("http_status_code", 200)
+```
+
+### merge(key, value)
+
+Deep merges into a nested object. Creates the field if it doesn't exist.
+
+```typescript
+builder.merge("user", { id: "123" })
+builder.merge("user", { tier: "premium" })
+// Result: { id: "123", tier: "premium" }
+```
+
+### enrich(key, value)
+
+Adds arbitrary metadata field. Runs at finalize time.
+
+```typescript
+builder.enrich("expensive_computation", compute())
+```
+
+Warns if the key contains sensitive words like "password", "token", "secret".
+
+## Timing Operations
+
+### timing(name, fn)
+
+Times an async function automatically:
+
+```typescript
+const result = await builder.timing("database", () => db.getUser(id))
+```
+
+Returns the function's result. Records timing even if the function throws.
+
+### time(name)
+
+Starts a manual timer:
+
+```typescript
+builder.time("external_api")
+```
+
+### timeEnd(name)
+
+Ends a timer and returns duration:
+
+```typescript
+const duration = builder.timeEnd("external_api")
+// duration: 120
+```
+
+Throws if no matching `time()` call.
+
+## Error Handling
+
+### error(err, context?)
+
+Captures an error with optional context:
+
+```typescript
+builder.error(new Error("failed"))
+builder.error(err, { component: "payment", amount: 100 })
+```
+
+Error is normalized with:
+- `type` - Error constructor name
+- `message` - Error message
+- `stack` - Stack trace (if available)
+- `context` - Your provided context
+
+### hasErrors()
+
+Returns true if any errors captured:
+
+```typescript
+if (builder.hasErrors()) {
+  builder.set("retry_count", 1)
+}
+```
+
+## Finalizing
+
+### finalize()
+
+Completes the event and returns immutable output:
+
+```typescript
+const event = builder.finalize()
+// Returns readonly object with:
+// - request_id
+// - trace_id  
+// - timestamp
+// - duration_ms
+// - timings
+// - error (if any)
+// - outcome: "success" | "error" | "timeout"
+```
+
+Usually you'll call `afterlog.finalize(builder)` instead, which handles sampling.
+
+## Reading State
+
+### snapshot_()
+
+Returns current state without finalizing:
+
+```typescript
+const snapshot = builder.snapshot_()
+```
+
+Uses caching - returns same reference until modified.
+
+### state_
+
+Current lifecycle state: `created` | `building` | `finalizing` | `emitted`
+
+```typescript
+console.log(builder.state_) // "building"
+```
+
+### id
+
+Unique builder instance UUID (readonly).
+
+### trace_id
+
+Trace UUID (readonly). Auto-generated or from init.
+
+## Example: Express Middleware
+
+```typescript
+function loggingMiddleware() {
+  return (req, res, next) => {
+    const builder = afterlog.createBuilder({
+      http_method: req.method,
+      path: req.path
+    })
+
+    req.log = builder
+    const start = Date.now()
+
+    res.on("finish", () => {
+      builder.set("http_status_code", res.statusCode)
+      builder.set("duration_ms", Date.now() - start)
+      afterlog.finalize(builder)
+    })
+
+    next()
+  }
+}
+
+app.use(loggingMiddleware())
+
+app.get("/users/:id", async (req, res) => {
+  const user = await req.log.timing("db", () => db.getUser(req.params.id))
+  req.log.set("user_id", user.id)
+  res.json(user)
+})
+```
